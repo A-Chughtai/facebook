@@ -1,0 +1,10 @@
+rename this file to .env and enter the APIs' and FaceBook email and password 
+
+
+APIFY_API_TOKEN=(enter apify api)
+GROQ_API_KEY=(groq API)
+GROQ_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
+TEMPERATURE=0
+DB_PATH=db/social_media.db
+FB_EMAIL=(facebook email)
+FB_PASSWORD=(facebook password)
