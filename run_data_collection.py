@@ -3,9 +3,6 @@ import os
 import sys
 from datetime import datetime
 import logging
-import time
-import locale
-import importlib.util
 
 def setup_logging():
     """Set up logging configuration"""
@@ -13,7 +10,7 @@ def setup_logging():
     os.makedirs(log_dir, exist_ok=True)
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = os.path.join(log_dir, f"automation_{timestamp}.log")
+    log_file = os.path.join(log_dir, f"data_collection_{timestamp}.log")
     
     logging.basicConfig(
         level=logging.INFO,
@@ -59,39 +56,23 @@ def run_script(script_name: str) -> bool:
         logging.error(f"Error running script {script_name}: {str(e)}")
         return False
 
-def cleanup():
-    """Clean up any temporary files or resources"""
-    try:
-        # Add any cleanup tasks here
-        json_file = "facebook_scraped_data.json"
-        if os.path.exists(json_file):
-            os.remove(json_file)
-            logging.info(f"Deleted {json_file}")
-        else:
-            logging.info(f"{json_file} not found")
-    except Exception as e:
-        logging.error(f"Error during cleanup: {str(e)}")
-
-def main():
+def run_data_collection():
     # Set up logging
     log_filename = setup_logging()
-    logging.info("Starting automation process...")
+    logging.info("Starting data collection process...")
     
     # List of scripts to run in sequence
     scripts = [
-        "send_messages.py"
+        "apify_data.py"
     ]
     
     # Run each script
     for script in scripts:
         if not run_script(script):
-            logging.error(f"Automation failed at {script}")
+            logging.error(f"Data collection failed at {script}")
             return False
     
-    # Cleanup
-    cleanup()
-    
-    logging.info("Automation completed successfully!")
+    logging.info("Data collection completed successfully!")
     logging.info(f"Log file created: {log_filename}")
     return True
 
@@ -102,11 +83,11 @@ if __name__ == "__main__":
             sys.stdout.reconfigure(encoding='utf-8')
             sys.stderr.reconfigure(encoding='utf-8')
         
-        success = main()
+        success = run_data_collection()
         if not success:
             sys.exit(1)
     except KeyboardInterrupt:
-        logging.info("Automation interrupted by user")
+        logging.info("Data collection interrupted by user")
         sys.exit(1)
     except Exception as e:
         logging.error(f"Unexpected error: {str(e)}")

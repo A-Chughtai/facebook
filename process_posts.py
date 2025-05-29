@@ -1,5 +1,4 @@
 import json
-import sqlite3
 import re
 import time
 from datetime import datetime
@@ -11,7 +10,14 @@ from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 from langchain.schema.runnable import RunnablePassthrough
 import os
+import sys
 from dotenv import load_dotenv
+from excel_handler import ExcelHandler
+
+# Set console encoding to UTF-8 for Windows
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
 
 # Load environment variables
 load_dotenv()
@@ -21,6 +27,10 @@ class PostClassification(BaseModel):
     confidence: float = Field(description="Confidence score between 0 and 1")
     reasoning: str = Field(description="Brief explanation for the classification")
 
+class PhoneNumberExtraction(BaseModel):
+    phone_numbers: List[str] = Field(description="List of WhatsApp numbers found in the text")
+    confidence: float = Field(description="Confidence score between 0 and 1")
+
 def setup_langchain():
     # Initialize Groq model
     llm = ChatGroq(
@@ -29,11 +39,14 @@ def setup_langchain():
         api_key=os.getenv("GROQ_API_KEY")
     )
     
-    # Create output parser
-    parser = PydanticOutputParser(pydantic_object=PostClassification)
+    # Create output parser for post classification
+    classification_parser = PydanticOutputParser(pydantic_object=PostClassification)
     
-    # Create prompt template
-    prompt = ChatPromptTemplate.from_messages([
+    # Create output parser for phone number extraction
+    phone_parser = PydanticOutputParser(pydantic_object=PhoneNumberExtraction)
+    
+    # Create prompt template for post classification
+    classification_prompt = ChatPromptTemplate.from_messages([
         ("system", """You are an expert at classifying social media posts, specifically focused on job postings and spam detection.
         
         Your task is to analyze each post and determine if it's a legitimate job posting or spam.
@@ -60,34 +73,54 @@ def setup_langchain():
         ("human", "Post text: {text}")
     ])
     
-    # Create chain using RunnableSequence
-    chain = (
+    # Create prompt template for phone number extraction
+    phone_prompt = ChatPromptTemplate.from_messages([
+        ("system", """You are an expert at extracting WhatsApp numbers from text. Your task is to identify all valid WhatsApp numbers in the given text.
+
+        Guidelines:
+        - Look for numbers that are likely WhatsApp numbers
+        - Numbers may be in various formats (e.g., +1234567890, 1234567890, 123-456-7890)
+        - Numbers should be 10-12 digits long (excluding country code)
+        - Always include the country code if present
+        - Format all numbers with a '+' prefix
+        - Remove any spaces, dashes, or other separators
+        - Provide a confidence score for each number
+        
+        {format_instructions}"""),
+        ("human", "Text: {text}")
+    ])
+    
+    # Create chains
+    classification_chain = (
         RunnablePassthrough.assign(
-            format_instructions=lambda _: parser.get_format_instructions()
+            format_instructions=lambda _: classification_parser.get_format_instructions()
         )
-        | prompt
+        | classification_prompt
         | llm
-        | parser
+        | classification_parser
     )
     
-    return chain
-
-def get_processed_posts(cursor):
-    cursor.execute('SELECT post_id FROM POSTS')
-    return {row[0] for row in cursor.fetchall()}
-
-def insert_or_get_user(cursor, fb_id: str, name: str) -> str:
-    cursor.execute('SELECT fb_id FROM USER WHERE fb_id = ?', (fb_id,))
-    result = cursor.fetchone()
+    phone_chain = (
+        RunnablePassthrough.assign(
+            format_instructions=lambda _: phone_parser.get_format_instructions()
+        )
+        | phone_prompt
+        | llm
+        | phone_parser
+    )
     
-    if result:
-        return result[0]
-    else:
-        cursor.execute('''
-        INSERT INTO USER (fb_id, name)
-        VALUES (?, ?)
-        ''', (fb_id, name))
-        return fb_id
+    return classification_chain, phone_chain
+
+def format_phone_number(phone: str) -> str:
+    # Remove spaces and keep existing + if present
+    if phone.startswith('+'):
+        return '+' + re.sub(r'\s+', '', phone[1:])
+    return '+' + re.sub(r'\s+', '', phone)
+
+def get_processed_posts(excel_handler):
+    """Get all post IDs that have been processed"""
+    posts = excel_handler.get_all_posts()
+    return {post['post_id'] for post in posts}
 
 def process_posts(reprocess_all: bool = False):
     # Check Groq API key
@@ -96,12 +129,10 @@ def process_posts(reprocess_all: bool = False):
         return
 
     # Initialize LangChain
-    chain = setup_langchain()
+    classification_chain, phone_chain = setup_langchain()
     
-    # Connect to database
-    db_path = os.getenv("DB_PATH", "db/social_media.db")
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+    # Initialize Excel handler
+    excel_handler = ExcelHandler()
     
     # Load Facebook data
     print("Loading Facebook data...")
@@ -109,7 +140,7 @@ def process_posts(reprocess_all: bool = False):
         data = json.load(file)
     
     # Get already processed posts
-    processed_posts = get_processed_posts(cursor)
+    processed_posts = get_processed_posts(excel_handler)
     print(f"Found {len(processed_posts)} already processed posts")
     
     # Filter out already processed posts
@@ -137,6 +168,7 @@ def process_posts(reprocess_all: bool = False):
         fb_id = user.get("id", "N/A")
         username = user.get("name", "Unknown")
         post_id = post.get("id", "N/A")
+        post_url = post.get("url", "")
         
         if post_id in processed_posts:
             print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Skipping already processed post {processed_count + 1}/{total_posts}")
@@ -154,7 +186,7 @@ def process_posts(reprocess_all: bool = False):
         try:
             # Classify post using LangChain
             print("Classifying post...")
-            result = chain.invoke({"text": text})
+            result = classification_chain.invoke({"text": text})
             classification = result.category
             confidence = result.confidence
             reasoning = result.reasoning
@@ -169,38 +201,52 @@ def process_posts(reprocess_all: bool = False):
                 processed_count += 1
                 continue
             
-            # Insert or get user
-            user_id = insert_or_get_user(cursor, fb_id, username)
+            # Extract phone numbers using LangChain
+            print("Extracting phone numbers...")
+            phone_result = phone_chain.invoke({"text": text})
+            phone_numbers = phone_result.phone_numbers
             
-            # Insert post
-            cursor.execute('''
-            INSERT INTO POSTS (user_id, username, post_id, post_text, message_sent)
-            VALUES (?, ?, ?, ?, ?)
-            ''', (user_id, username, post_id, text, False))
+            # Format phone numbers
+            formatted_numbers = [format_phone_number(num) for num in phone_numbers]
+            wa_no = formatted_numbers[0] if formatted_numbers else None
             
-            # Commit after each successful post
-            conn.commit()
+            if wa_no:
+                print(f"Found WhatsApp number: {wa_no}")
+            else:
+                print("No WhatsApp number found")
             
-            job_posts_count += 1
-            processed_count += 1
-            post_time = time.time() - post_start_time
-            total_time = time.time() - start_time
-            avg_time = total_time / processed_count
+            # Add post to Excel
+            success = excel_handler.add_post(
+                fb_id, 
+                username, 
+                post_id, 
+                text, 
+                post_url=post_url,
+                wa_no=wa_no
+            )
             
-            print(f"Job post stored successfully!")
-            print(f"Post processed in {post_time:.2f} seconds")
-            print(f"Progress: {processed_count}/{total_posts} posts ({(processed_count/total_posts)*100:.1f}%)")
-            print(f"Job posts found: {job_posts_count}")
-            print(f"Average time per post: {avg_time:.2f} seconds")
-            print(f"Estimated time remaining: {(avg_time * (total_posts - processed_count))/60:.1f} minutes")
-            print("-" * 50)
+            if success:
+                job_posts_count += 1
+                processed_count += 1
+                post_time = time.time() - post_start_time
+                total_time = time.time() - start_time
+                avg_time = total_time / processed_count
+                
+                print(f"Job post stored successfully!")
+                print(f"Post processed in {post_time:.2f} seconds")
+                print(f"Progress: {processed_count}/{total_posts} posts ({(processed_count/total_posts)*100:.1f}%)")
+                print(f"Job posts found: {job_posts_count}")
+                print(f"Average time per post: {avg_time:.2f} seconds")
+                print(f"Estimated time remaining: {(avg_time * (total_posts - processed_count))/60:.1f} minutes")
+                print("-" * 50)
+            else:
+                print("Failed to store post in Excel")
             
             # Add a small delay between posts
             time.sleep(1)
             
         except Exception as e:
             print(f"Error processing post: {str(e)}")
-            conn.rollback()
             continue
     
     total_time = time.time() - start_time

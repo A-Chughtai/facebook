@@ -44,7 +44,7 @@ def type_like_human(element, text):
     for char in text:
         element.send_keys(char)
         # Random delay between keystrokes (50-150ms)
-        time.sleep(random.uniform(0.05, 0.15))
+        time.sleep(random.uniform(0.01, 0.05))
     
     # Add a small delay after typing
     human_delay()
@@ -205,45 +205,9 @@ def send_messenger_message(driver, user_id: str, message: str):
         print(f"Error sending Messenger message: {str(e)}")
         return False
 
-def send_whatsapp_message(driver, phone_number: str, message: str):
-    try:
-        # Navigate to WhatsApp Web
-        driver.get("https://web.whatsapp.com")
-        
-        # Wait for QR code scan
-        input("Please scan the QR code and press Enter to continue...")
-        
-        # Add a natural delay after QR scan
-        time.sleep(random.uniform(2, 4))
-        
-        # Navigate to chat
-        driver.get(f"https://web.whatsapp.com/send?phone={phone_number}")
-        time.sleep(random.uniform(4, 6))  # Wait for chat to load
-        
-        # Find message input and send message
-        message_input = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "[title='Type a message']"))
-        )
-        human_delay()  # Wait before typing
-        type_like_human(message_input, message)
-        
-        # Wait before sending
-        human_delay()
-        message_input.send_keys(Keys.RETURN)
-        
-        # Wait for message to be sent
-        time.sleep(random.uniform(2, 4))
-        return True
-    except Exception as e:
-        print(f"Error sending WhatsApp message: {str(e)}")
-        return False
-
 def main():
-    parser = argparse.ArgumentParser(description='Send messages via WhatsApp or Messenger')
-    parser.add_argument('--platform', choices=['whatsapp', 'messenger'], required=True,
-                      help='Platform to send message through')
-    parser.add_argument('--phone', help='Phone number for WhatsApp')
-    parser.add_argument('--user_id', help='User ID for Messenger')
+    parser = argparse.ArgumentParser(description='Send messages via Messenger')
+    parser.add_argument('--user_id', required=True, help='User ID for Messenger')
     parser.add_argument('--message', required=True, help='Message to send')
     
     args = parser.parse_args()
@@ -251,16 +215,7 @@ def main():
     driver = setup_driver()
     
     try:
-        success = False
-        if args.platform == 'whatsapp':
-            if not args.phone:
-                raise ValueError("Phone number is required for WhatsApp")
-            success = send_whatsapp_message(driver, args.phone, args.message)
-        else:  # messenger
-            if not args.user_id:
-                raise ValueError("User ID is required for Messenger")
-            success = send_messenger_message(driver, args.user_id, args.message)
-        
+        success = send_messenger_message(driver, args.user_id, args.message)
         # Exit with appropriate status code
         sys.exit(0 if success else 1)
     finally:

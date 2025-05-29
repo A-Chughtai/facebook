@@ -25,7 +25,6 @@ def create_directories():
     """Create necessary directories for the project"""
     directories = [
         "db",           # Main database directory
-        "db/history",   # Message history directory
         "logs"          # Logs directory
     ]
     
@@ -36,17 +35,17 @@ def create_directories():
         else:
             logging.info(f"Directory already exists: {directory}")
 
-def run_database_setup():
-    """Run the database creation script"""
-    logging.info("Running database setup script...")
+def run_excel_setup():
+    """Run the Excel creation script"""
+    logging.info("Running Excel setup script...")
     try:
         # Set environment variables for proper encoding
         my_env = os.environ.copy()
         my_env["PYTHONIOENCODING"] = "utf-8"
         
-        # Run the database creation script
+        # Run the Excel creation script
         result = subprocess.run(
-            [sys.executable, "create_database.py"],
+            [sys.executable, "create_excel.py"],
             capture_output=True,
             text=True,
             encoding='utf-8',
@@ -56,18 +55,18 @@ def run_database_setup():
         
         # Log the output
         if result.stdout:
-            logging.info(f"Database setup output:\n{result.stdout}")
+            logging.info(f"Excel setup output:\n{result.stdout}")
         
         return True
     except subprocess.CalledProcessError as e:
-        logging.error("Error running database setup:")
+        logging.error("Error running Excel setup:")
         if e.stdout:
             logging.error(f"Output: {e.stdout}")
         if e.stderr:
             logging.error(f"Error: {e.stderr}")
         return False
     except Exception as e:
-        logging.error(f"Unexpected error during database setup: {str(e)}")
+        logging.error(f"Unexpected error during Excel setup: {str(e)}")
         return False
 
 def main():
@@ -79,9 +78,9 @@ def main():
         # Create necessary directories
         create_directories()
         
-        # Run database setup
-        if not run_database_setup():
-            logging.error("Database setup failed!")
+        # Run Excel setup
+        if not run_excel_setup():
+            logging.error("Excel setup failed!")
             return False
         
         logging.info("Project setup completed successfully!")
