@@ -1,5 +1,4 @@
 import streamlit as st
-import subprocess
 import os
 import sys
 from datetime import datetime
@@ -9,9 +8,10 @@ import locale
 import json
 import pandas as pd
 from pathlib import Path
-from process_followups import process_followups
 from followup_handler import FollowupHandler
 from run_data_collection import run_data_collection
+from send_messages import process_unanswered_posts
+from process_posts import process_posts
 
 # Page config
 st.set_page_config(
@@ -29,10 +29,6 @@ if 'data_collection_running' not in st.session_state:
     st.session_state.data_collection_running = False
 if 'process_posts_running' not in st.session_state:
     st.session_state.process_posts_running = False
-if 'process_sequence' not in st.session_state:
-    st.session_state.process_sequence = [
-        "send_messages.py"
-    ]
 
 def setup_logging():
     if not os.path.exists("logs"):
@@ -48,43 +44,6 @@ def setup_logging():
         ]
     )
     return log_filename
-
-def run_script(script_name):
-    logging.info(f"Running {script_name}...")
-    try:
-        my_env = os.environ.copy()
-        my_env["PYTHONIOENCODING"] = "utf-8"
-        
-        # Set console encoding to UTF-8 for Windows
-        if sys.platform == 'win32':
-            sys.stdout.reconfigure(encoding='utf-8')
-            sys.stderr.reconfigure(encoding='utf-8')
-        
-        result = subprocess.run(
-            [sys.executable, script_name],
-            capture_output=True,
-            text=True,
-            encoding='utf-8',
-            env=my_env,
-            check=True
-        )
-        
-        if result.stdout:
-            logging.info(f"Output from {script_name}:\n{result.stdout}")
-        
-        return True
-    except subprocess.CalledProcessError as e:
-        error_msg = f"Error running {script_name}:"
-        if e.stdout:
-            error_msg += f"\nOutput: {e.stdout}"
-        if e.stderr:
-            error_msg += f"\nError: {e.stderr}"
-        logging.error(error_msg)
-        return False
-    except Exception as e:
-        error_msg = f"Unexpected error running {script_name}: {str(e)}"
-        logging.error(error_msg)
-        return False
 
 def cleanup():
     logging.info("Cleaning up...")
@@ -103,21 +62,22 @@ def run_automation():
     log_filename = setup_logging()
     logging.info("Starting automation process...")
     
-    # Run each script
-    for script in st.session_state.process_sequence:
-        if not run_script(script):
-            error_msg = f"Automation failed at {script}"
-            logging.error(error_msg)
-            st.session_state.running = False
-            return False
-    
-    # Cleanup
-    cleanup()
-    
-    success_msg = "Automation completed successfully!"
-    logging.info(success_msg)
-    st.session_state.running = False
-    return True
+    try:
+        # Process unanswered posts
+        process_unanswered_posts()
+        
+        # Cleanup
+        cleanup()
+        
+        success_msg = "Automation completed successfully!"
+        logging.info(success_msg)
+        st.session_state.running = False
+        return True
+    except Exception as e:
+        error_msg = f"Error during automation: {str(e)}"
+        logging.error(error_msg)
+        st.session_state.running = False
+        return False
 
 def run_followups():
     """Run the follow-up processing"""
@@ -184,8 +144,8 @@ def run_process_posts():
     logging.info("Starting post processing...")
     
     try:
-        # Run process_posts.py
-        success = run_script("process_posts.py")
+        # Process posts directly
+        success = process_posts()
         
         if success:
             # Perform cleanup

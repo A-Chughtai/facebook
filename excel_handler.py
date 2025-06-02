@@ -25,6 +25,18 @@ class ExcelHandler:
                 'wa_no'  # WhatsApp number column
             ])
             
+            # Set data types
+            df = df.astype({
+                'id': 'int64',
+                'user_id': 'str',
+                'username': 'str',
+                'post_id': 'str',
+                'post_text': 'str',
+                'post_url': 'str',
+                'message_sent': 'int64',
+                'wa_no': 'str'  # Set wa_no as string type
+            })
+            
             # Save to Excel
             df.to_excel(self.file_path, index=False)
     
@@ -82,7 +94,10 @@ class ExcelHandler:
         """Update WhatsApp number for a post"""
         try:
             df = pd.read_excel(self.file_path)
-            df.loc[df['id'] == post_id, 'wa_no'] = wa_no
+            # Convert wa_no column to string type if it's not already
+            df['wa_no'] = df['wa_no'].astype('str')
+            # Update the value
+            df.loc[df['id'] == post_id, 'wa_no'] = str(wa_no)
             df.to_excel(self.file_path, index=False)
             return True
         except Exception as e:

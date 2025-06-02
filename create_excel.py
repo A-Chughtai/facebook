@@ -40,7 +40,8 @@ def create_excel_structure():
         'message',
         'status',  # 'pending' or 'completed'
         'created_at',  # When the follow-up was created
-        'last_message_date'  # When the user was last messaged
+        'last_message_date',  # When the user was last messaged
+        'user_replied'  # Whether the user has replied to the message
     ])
     followups_df.to_excel(followups_path, index=False)
     print("\nFollow-ups Excel file structure created successfully!")

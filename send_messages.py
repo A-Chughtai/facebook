@@ -2,15 +2,16 @@ import json
 import os
 from datetime import datetime, timedelta
 import re
+import time
 from typing import List, Dict, Optional
 from langchain_groq import ChatGroq
 from langchain.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
-import subprocess
 import importlib.util
 from excel_handler import ExcelHandler
 from followup_handler import FollowupHandler
 import whatsapp
+from message import setup_driver, send_messenger_message as send_messenger_message_driver
 
 # Load environment variables
 load_dotenv()
@@ -122,17 +123,16 @@ def send_whatsapp_message(phone_number: str, message: str) -> bool:
             return False
 
 def send_messenger_message(user_id: str, message: str) -> bool:
-    # Call message.py with Messenger parameters
-    result = subprocess.run([
-        "python", "message.py",
-        "--user_id", user_id,
-        "--message", message
-    ], capture_output=True, text=True)
-    
-    if result.returncode != 0:
-        print(f"Error sending Messenger message: {result.stderr}")
+    driver = None
+    try:
+        driver = setup_driver()
+        return send_messenger_message_driver(driver, user_id, message)
+    except Exception as e:
+        print(f"Error sending Messenger message: {str(e)}")
         return False
-    return True
+    finally:
+        if driver:
+            driver.quit()
 
 def process_unanswered_posts():
     # Initialize handlers
@@ -147,6 +147,7 @@ def process_unanswered_posts():
     messaged_users = set()
     
     for post in unanswered_posts:
+        time.sleep(random.uniform(4, 8))
         post_id = post['id']
         user_id = post['user_id']
         username = post['username']

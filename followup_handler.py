@@ -59,7 +59,8 @@ class FollowupHandler:
                 'message',
                 'status',  # 'pending' or 'completed'
                 'created_at',  # When the follow-up was created
-                'last_message_date'  # When the user was last messaged
+                'last_message_date',  # When the user was last messaged
+                'user_replied'  # Whether the user has replied to the message
             ])
             
             # Save to Excel
@@ -139,22 +140,38 @@ class FollowupHandler:
             if not message:
                 message = self.compose_followup_message(username, post_url, user_id)
             
-            # Create new row
-            new_row = {
-                'id': new_id,
-                'user_id': user_id,
-                'username': username,
+            # Handle None values and ensure proper data types
+            phone_number = str(phone_number) if phone_number is not None else ""
+            message = str(message) if message is not None else ""
+            last_message_date = last_message_date or datetime.now()
+            
+            # Create new row with explicit data types
+            new_row = pd.DataFrame([{
+                'id': int(new_id),
+                'user_id': str(user_id),
+                'username': str(username),
                 'phone_number': phone_number,
-                'post_url': post_url,
+                'post_url': str(post_url),
                 'followup_date': followup_date,
                 'message': message,
                 'status': 'pending',
                 'created_at': datetime.now(),
-                'last_message_date': last_message_date or datetime.now()
-            }
+                'last_message_date': last_message_date,
+                'user_replied': False  # Initialize user_replied as False
+            }])
+            
+            # Ensure all columns have the same data types
+            for col in df.columns:
+                if col in new_row.columns:
+                    try:
+                        new_row[col] = new_row[col].astype(df[col].dtype)
+                    except Exception as e:
+                        print(f"Warning: Could not convert column {col} to {df[col].dtype}: {str(e)}")
+                        # If conversion fails, keep the original type
+                        continue
             
             # Append new row
-            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+            df = pd.concat([df, new_row], ignore_index=True)
             
             # Save to Excel
             df.to_excel(self.file_path, index=False)
@@ -164,9 +181,18 @@ class FollowupHandler:
             return False
     
     def get_pending_followups(self) -> List[Dict]:
-        """Get all pending follow-ups that were scheduled one day ago or more"""
+        """Get all pending follow-ups that were scheduled one day ago or more and user hasn't replied"""
         try:
-            df = pd.read_excel(self.file_path)
+            # Try to read the Excel file
+            try:
+                df = pd.read_excel(self.file_path)
+            except PermissionError:
+                print(f"Error: Cannot access {self.file_path}. Please make sure the file is not open in another program.")
+                return []
+            except Exception as e:
+                print(f"Error reading Excel file: {str(e)}")
+                return []
+                
             today = datetime.now().date()
             one_day_ago = today - timedelta(days=1)
             
@@ -174,18 +200,31 @@ class FollowupHandler:
             df['followup_date'] = pd.to_datetime(df['followup_date']).dt.date
             df['created_at'] = pd.to_datetime(df['created_at']).dt.date
             
+            # Mark followups as cancelled if user has replied
+            df.loc[df['user_replied'] == True, 'status'] = 'cancelled'
+            
             # Filter for pending follow-ups that:
-            # 1. Are due today
-            # 2. Were created one day ago or more
+            # 1. Were created one day ago or more
+            # 2. User hasn't replied
             pending = df[
                 (df['status'] == 'pending') & 
-                (df['followup_date'] == today) &  # Due today
-                (df['created_at'] <= one_day_ago)  # Created one day ago or more
+                (df['created_at'] <= one_day_ago) &  # Created one day ago or more
+                (df['user_replied'] != True)  # User hasn't replied
             ]
+            
+            # Try to save the updated statuses back to Excel
+            try:
+                df.to_excel(self.file_path, index=False)
+            except PermissionError:
+                print(f"Error: Cannot save to {self.file_path}. Please make sure the file is not open in another program.")
+                return pending.to_dict('records')
+            except Exception as e:
+                print(f"Error saving to Excel file: {str(e)}")
+                return pending.to_dict('records')
             
             return pending.to_dict('records')
         except Exception as e:
-            print(f"Error reading follow-ups from Excel file: {str(e)}")
+            print(f"Error processing follow-ups: {str(e)}")
             return []
     
     def mark_followup_completed(self, followup_id: int) -> bool:

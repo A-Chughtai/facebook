@@ -8,3 +8,6 @@ TEMPERATURE=0
 DB_PATH=db/social_media.db
 FB_EMAIL=(facebook email)
 FB_PASSWORD=(facebook password)
+EMAIL_USER=(email of system)
+EMAIL_PASS=(password of gamil app {can be generated in security after enabling 2FA})
+ALERT_RECIPIENT=(email of admin who will monitor system and receive alerts)

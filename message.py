@@ -13,6 +13,9 @@ from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
 import os
 import sys
+from alert import send_alert
+import re
+
 
 # Load environment variables
 load_dotenv()
@@ -37,6 +40,12 @@ def human_delay():
     time.sleep(random.uniform(0.5, 2.0))
 
 def type_like_human(element, text):
+    time.sleep(random.uniform(4, 8))
+    # Clear existing text using CTRL+A and Backspace
+    element.send_keys(Keys.CONTROL + "a")
+    element.send_keys(Keys.BACKSPACE)
+    human_delay()
+
     """Type text like a human with random delays between keystrokes"""
     # Replace newlines with spaces to prevent line breaks
     text = text.replace('\n', ' ')
@@ -44,7 +53,7 @@ def type_like_human(element, text):
     for char in text:
         element.send_keys(char)
         # Random delay between keystrokes (50-150ms)
-        time.sleep(random.uniform(0.01, 0.05))
+        time.sleep(random.uniform(0.04, 0.09))
     
     # Add a small delay after typing
     human_delay()
@@ -91,55 +100,21 @@ def send_messenger_message(driver, user_id: str, message: str):
         human_delay()  # Wait before clicking
         login_button.click()
         
-        # Wait for login to complete and check for 2FA or CAPTCHA
-        time.sleep(random.uniform(3, 5))
+        # Wait for login to complete and check for auth platform redirect
+        time.sleep(random.uniform(9, 12))
         
-        # Check for 2FA
-        try:
-            # Look for common 2FA elements
-            two_factor_elements = [
-                "//input[@name='approvals_code']",  # 2FA code input
-                "//div[contains(text(), 'Enter security code')]",  # 2FA text
-                "//div[contains(text(), 'Two-factor authentication')]"  # 2FA header
-            ]
-            
-            for selector in two_factor_elements:
-                try:
-                    element = WebDriverWait(driver, 3).until(
-                        EC.presence_of_element_located((By.XPATH, selector))
-                    )
-                    if element:
-                        print("2FA detected! Please enter the code manually.")
-                        input("Enter the 2FA code and press Enter to continue...")
-                        break
-                except:
-                    continue
-        except Exception as e:
-            print(f"Error checking for 2FA: {str(e)}")
-        
-        # Check for CAPTCHA
-        try:
-            # Look for common CAPTCHA elements
-            captcha_elements = [
-                "//iframe[contains(@src, 'captcha')]",
-                "//div[contains(@class, 'captcha')]",
-                "//div[contains(text(), 'Security Check')]",
-                "//div[contains(text(), 'Verify you're not a robot')]"
-            ]
-            
-            for selector in captcha_elements:
-                try:
-                    element = WebDriverWait(driver, 3).until(
-                        EC.presence_of_element_located((By.XPATH, selector))
-                    )
-                    if element:
-                        print("CAPTCHA detected! Please solve it manually.")
-                        input("Solve the CAPTCHA and press Enter to continue...")
-                        break
-                except:
-                    continue
-        except Exception as e:
-            print(f"Error checking for CAPTCHA: {str(e)}")
+        url = driver.current_url
+        print(url)
+        # Check for auth platform redirect
+        if not re.match(r'^https?://(?:www\.)?facebook\.com/?$', url):
+            send_alert(
+                subject="Messenger Auth required",
+                message=f"Please authenticate the Messenger Platform ASAP. The program has paused. Press ENTER on console after auth",
+                recipient=os.getenv("ALERT_RECIPIENT")
+            )
+            print("Facebook has redirected to the authentication platform.")
+            print("Please complete the authentication manually.")
+            input("Press Enter after you have completed the authentication...")
         
         # Navigate to messenger
         driver.get(f"https://www.facebook.com/messages/t/{user_id}")

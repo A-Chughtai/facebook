@@ -163,13 +163,23 @@ def process_posts(reprocess_all: bool = False):
     
     for post in data:
         post_start_time = time.time()
-        text = post.get("text", "")
+        text = post.get("text", "").strip()
         user = post.get("user", {})
         fb_id = user.get("id", "N/A")
         username = user.get("name", "Unknown")
         post_id = post.get("id", "N/A")
         post_url = post.get("url", "")
         
+        # Input validation
+        if not text:
+            print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Skipping post {processed_count + 1}/{total_posts}")
+            print(f"User: {username} (ID: {fb_id})")
+            print(f"Post ID: {post_id}")
+            print("Error: Post text is empty or None")
+            skipped_count += 1
+            processed_count += 1
+            continue
+            
         if post_id in processed_posts:
             print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Skipping already processed post {processed_count + 1}/{total_posts}")
             print(f"User: {username} (ID: {fb_id})")
@@ -256,6 +266,8 @@ def process_posts(reprocess_all: bool = False):
     print(f"Posts skipped (already in database): {skipped_count}")
     print(f"Job posts found and stored: {job_posts_count}")
     print(f"Spam posts skipped: {spam_posts_count}")
+
+    return True
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process Facebook posts using LangChain and Groq')
