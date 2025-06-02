@@ -12,6 +12,7 @@ from followup_handler import FollowupHandler
 from run_data_collection import run_data_collection
 from send_messages import process_unanswered_posts
 from process_posts import process_posts
+import subprocess
 
 # Page config
 st.set_page_config(
@@ -29,6 +30,8 @@ if 'data_collection_running' not in st.session_state:
     st.session_state.data_collection_running = False
 if 'process_posts_running' not in st.session_state:
     st.session_state.process_posts_running = False
+if 'setup_running' not in st.session_state:
+    st.session_state.setup_running = False
 
 def setup_logging():
     if not os.path.exists("logs"):
@@ -164,21 +167,80 @@ def run_process_posts():
         st.session_state.process_posts_running = False
         return False
 
+def run_setup():
+    """Run the setup.py script"""
+    st.session_state.setup_running = True
+    
+    # Set up logging
+    log_filename = setup_logging()
+    logging.info("Starting setup process...")
+    
+    try:
+        # Set environment variables for proper encoding
+        my_env = os.environ.copy()
+        my_env["PYTHONIOENCODING"] = "utf-8"
+        
+        # Run the setup script
+        result = subprocess.run(
+            [sys.executable, "setup.py"],
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            env=my_env,
+            check=True
+        )
+        
+        # Log the output
+        if result.stdout:
+            logging.info(f"Setup output:\n{result.stdout}")
+        
+        success_msg = "Setup completed successfully!"
+        logging.info(success_msg)
+        st.session_state.setup_running = False
+        return True
+    except subprocess.CalledProcessError as e:
+        error_msg = "Error running setup:"
+        if e.stdout:
+            error_msg += f"\nOutput: {e.stdout}"
+        if e.stderr:
+            error_msg += f"\nError: {e.stderr}"
+        logging.error(error_msg)
+        st.session_state.setup_running = False
+        return False
+    except Exception as e:
+        error_msg = f"Error during setup: {str(e)}"
+        logging.error(error_msg)
+        st.session_state.setup_running = False
+        return False
+
 # Main UI
 st.title("🤖 Facebook Automation")
 
-# Create four columns for the buttons
-col1, col2, col3, col4 = st.columns(4)
+# Create five columns for the buttons
+col1, col2, col3, col4, col5 = st.columns(5)
 
 # Check if any process is running
 any_process_running = (
     st.session_state.data_collection_running or
     st.session_state.process_posts_running or
     st.session_state.running or
-    st.session_state.followup_running
+    st.session_state.followup_running or
+    st.session_state.setup_running
 )
 
 with col1:
+    if not st.session_state.setup_running:
+        if st.button(
+            "Run Setup",
+            type="primary",
+            use_container_width=True,
+            disabled=any_process_running and not st.session_state.setup_running
+        ):
+            run_setup()
+    else:
+        st.warning("Setup is running...")
+
+with col2:
     if not st.session_state.data_collection_running:
         if st.button(
             "Run Data Collection",
@@ -190,7 +252,7 @@ with col1:
     else:
         st.warning("Data collection is running...")
 
-with col2:
+with col3:
     if not st.session_state.process_posts_running:
         if st.button(
             "Process Posts",
@@ -202,7 +264,7 @@ with col2:
     else:
         st.warning("Post processing is running...")
 
-with col3:
+with col4:
     if not st.session_state.running:
         if st.button(
             "Start Automation",
@@ -214,7 +276,7 @@ with col3:
     else:
         st.warning("Automation is running...")
 
-with col4:
+with col5:
     if not st.session_state.followup_running:
         if st.button(
             "Process Follow-ups",
