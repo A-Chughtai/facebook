@@ -176,6 +176,15 @@ def run_setup():
     logging.info("Starting setup process...")
     
     try:
+        # Check if files already exist
+        excel_files = ["db/social_media.xlsx", "db/followups.xlsx"]
+        files_exist = all(os.path.exists(file) for file in excel_files)
+        
+        if files_exist:
+            logging.info("Excel files already exist. Skipping setup.")
+            st.session_state.setup_running = False
+            return True
+        
         # Set environment variables for proper encoding
         my_env = os.environ.copy()
         my_env["PYTHONIOENCODING"] = "utf-8"
