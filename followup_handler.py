@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import json
 import subprocess
 import re
+from followup_sheets_handler import FollowupSheetsHandler
 
 # Load environment variables
 load_dotenv()
@@ -38,33 +39,8 @@ def extract_phone_numbers(text: str) -> List[str]:
     return phone_numbers
 
 class FollowupHandler:
-    def __init__(self, file_path="db/followups.xlsx"):
-        self.file_path = file_path
-        self.ensure_file_exists()
-    
-    def ensure_file_exists(self):
-        """Create Excel file with proper schema if it doesn't exist"""
-        if not os.path.exists(self.file_path):
-            # Create directory if it doesn't exist
-            os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
-            
-            # Create DataFrame with schema
-            df = pd.DataFrame(columns=[
-                'id',
-                'user_id',
-                'username',
-                'phone_number',
-                'post_url',
-                'followup_date',
-                'message',
-                'status',  # 'pending' or 'completed'
-                'created_at',  # When the follow-up was created
-                'last_message_date',  # When the user was last messaged
-                'user_replied'  # Whether the user has replied to the message
-            ])
-            
-            # Save to Excel
-            df.to_excel(self.file_path, index=False)
+    def __init__(self, credentials_file="credentials.json"):
+        self.sheets_handler = FollowupSheetsHandler(credentials_file=credentials_file)
     
     def get_message_history(self, user_id: str) -> List[Dict]:
         """Get message history for a user"""
@@ -129,100 +105,30 @@ class FollowupHandler:
     def add_followup(self, user_id: str, username: str, phone_number: str, 
                     post_url: str, followup_date: datetime, message: Optional[str] = None, 
                     last_message_date: Optional[datetime] = None) -> bool:
-        """Add a new follow-up entry to the Excel file"""
+        """Add a new follow-up entry to the Google Sheet"""
         try:
-            df = pd.read_excel(self.file_path)
-            
-            # Generate new ID
-            new_id = 1 if df.empty else df['id'].max() + 1
-            
             # Compose message if not provided
             if not message:
                 message = self.compose_followup_message(username, post_url, user_id)
             
-            # Handle None values and ensure proper data types
-            phone_number = str(phone_number) if phone_number is not None else ""
-            message = str(message) if message is not None else ""
-            last_message_date = last_message_date or datetime.now()
-            
-            # Create new row with explicit data types
-            new_row = pd.DataFrame([{
-                'id': int(new_id),
-                'user_id': str(user_id),
-                'username': str(username),
-                'phone_number': phone_number,
-                'post_url': str(post_url),
-                'followup_date': followup_date,
-                'message': message,
-                'status': 'pending',
-                'created_at': datetime.now(),
-                'last_message_date': last_message_date,
-                'user_replied': False  # Initialize user_replied as False
-            }])
-            
-            # Ensure all columns have the same data types
-            for col in df.columns:
-                if col in new_row.columns:
-                    try:
-                        new_row[col] = new_row[col].astype(df[col].dtype)
-                    except Exception as e:
-                        print(f"Warning: Could not convert column {col} to {df[col].dtype}: {str(e)}")
-                        # If conversion fails, keep the original type
-                        continue
-            
-            # Append new row
-            df = pd.concat([df, new_row], ignore_index=True)
-            
-            # Save to Excel
-            df.to_excel(self.file_path, index=False)
-            return True
+            # Add follow-up using sheets handler
+            return self.sheets_handler.add_followup(
+                user_id=user_id,
+                username=username,
+                phone_number=phone_number,
+                post_url=post_url,
+                followup_date=followup_date,
+                message=message,
+                last_message_date=last_message_date
+            )
         except Exception as e:
-            print(f"Error adding follow-up to Excel file: {str(e)}")
+            print(f"Error adding follow-up to Google Sheet: {str(e)}")
             return False
     
     def get_pending_followups(self) -> List[Dict]:
         """Get all pending follow-ups that were scheduled one day ago or more and user hasn't replied"""
         try:
-            # Try to read the Excel file
-            try:
-                df = pd.read_excel(self.file_path)
-            except PermissionError:
-                print(f"Error: Cannot access {self.file_path}. Please make sure the file is not open in another program.")
-                return []
-            except Exception as e:
-                print(f"Error reading Excel file: {str(e)}")
-                return []
-                
-            today = datetime.now().date()
-            one_day_ago = today - timedelta(days=1)
-            
-            # Convert dates to datetime if they're not already
-            df['followup_date'] = pd.to_datetime(df['followup_date']).dt.date
-            df['created_at'] = pd.to_datetime(df['created_at']).dt.date
-            
-            # Mark followups as cancelled if user has replied
-            df.loc[df['user_replied'] == True, 'status'] = 'cancelled'
-            
-            # Filter for pending follow-ups that:
-            # 1. Were created one day ago or more
-            # 2. User hasn't replied
-            pending = df[
-                (df['status'] == 'pending') & 
-                (df['created_at'] <= one_day_ago) &  # Created one day ago or more
-                (df['user_replied'] != True)  # User hasn't replied
-            ]
-            
-            # Try to save the updated statuses back to Excel
-            try:
-                df.to_excel(self.file_path, index=False)
-            except PermissionError:
-                print(f"Error: Cannot save to {self.file_path}. Please make sure the file is not open in another program.")
-                return pending.to_dict('records')
-            except Exception as e:
-                print(f"Error saving to Excel file: {str(e)}")
-                return pending.to_dict('records')
-            
-            return pending.to_dict('records')
+            return self.sheets_handler.get_pending_followups()
         except Exception as e:
             print(f"Error processing follow-ups: {str(e)}")
             return []
@@ -230,10 +136,7 @@ class FollowupHandler:
     def mark_followup_completed(self, followup_id: int) -> bool:
         """Mark a follow-up as completed"""
         try:
-            df = pd.read_excel(self.file_path)
-            df.loc[df['id'] == followup_id, 'status'] = 'completed'
-            df.to_excel(self.file_path, index=False)
-            return True
+            return self.sheets_handler.mark_followup_completed(followup_id)
         except Exception as e:
             print(f"Error updating follow-up status: {str(e)}")
             return False
@@ -241,25 +144,18 @@ class FollowupHandler:
     def delete_followup(self, followup_id: int) -> bool:
         """Delete a follow-up entry"""
         try:
-            df = pd.read_excel(self.file_path)
-            df = df[df['id'] != followup_id]
-            df.to_excel(self.file_path, index=False)
-            return True
+            return self.sheets_handler.delete_followup(followup_id)
         except Exception as e:
             print(f"Error deleting follow-up: {str(e)}")
             return False
     
-    def get_all_followups(self) -> pd.DataFrame:
+    def get_all_followups(self) -> List[Dict]:
         """Get all follow-ups with their creation timestamps"""
         try:
-            df = pd.read_excel(self.file_path)
-            # Convert timestamps to datetime if they're not already
-            df['created_at'] = pd.to_datetime(df['created_at'])
-            df['followup_date'] = pd.to_datetime(df['followup_date'])
-            return df
+            return self.sheets_handler.get_all_followups()
         except Exception as e:
             print(f"Error reading follow-ups: {str(e)}")
-            return pd.DataFrame()
+            return []
     
     def process_followups(self) -> Dict[str, int]:
         """Process all pending follow-ups and send messages"""

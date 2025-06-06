@@ -11,7 +11,8 @@ def send_alert(
     message: str,
     recipient: str,
     sender_email: Optional[str] = os.getenv("EMAIL_USER"),
-    sender_password: Optional[str] = os.getenv("EMAIL_PASS")
+    sender_password: Optional[str] = os.getenv("EMAIL_PASS"),
+    attachment_path: Optional[str] = None
 ) -> bool:
     """
     Send an email alert using SMTP.
@@ -22,6 +23,7 @@ def send_alert(
         recipient (str): The recipient's email address
         sender_email (str, optional): The sender's email address. Defaults to the configured Gmail address
         sender_password (str, optional): The sender's app password. Defaults to the configured app password
+        attachment_path (str, optional): Path to file to attach to the email
     
     Returns:
         bool: True if email was sent successfully, False otherwise
@@ -33,6 +35,18 @@ def send_alert(
         msg['From'] = sender_email
         msg['To'] = recipient
         msg.set_content(message)
+        
+        # Add attachment if provided
+        if attachment_path and os.path.exists(attachment_path):
+            with open(attachment_path, 'rb') as f:
+                file_data = f.read()
+                file_name = os.path.basename(attachment_path)
+                msg.add_attachment(
+                    file_data,
+                    maintype='image',
+                    subtype='png',
+                    filename=file_name
+                )
         
         # Gmail SMTP server configuration
         smtp_server = "smtp.gmail.com"

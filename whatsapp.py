@@ -12,6 +12,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from alert import send_alert
 import os
 import re
+from datetime import datetime
 
 # List of user agents
 user_agents = [
@@ -84,17 +85,18 @@ def wait_for_qr_scan(driver, timeout=300):
     Returns:
         bool: True if QR code was scanned successfully, False if timeout occurred
     """
-    time.sleep(30)
+    time.sleep(7)
     try:
         # First check if already logged in by looking for "Loading your chats"
         try:
-            WebDriverWait(driver, 30).until(
+            WebDriverWait(driver, 3).until(
                 EC.any_of(
                     EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Loading your chats')]")),
+                    EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'End-to-end encrypted')]")),
                     EC.presence_of_element_located((By.XPATH, "//*[normalize-space(text())='Chats']"))
                 )
             )
-            print("Already logged in - Loading chats detected")
+            print("Already logged in")
             return True
         except:
             print("Not logged in - proceeding with QR code check")
@@ -112,15 +114,25 @@ def wait_for_qr_scan(driver, timeout=300):
         found_text = None
         for text in qr_code_texts:
             try:
-                element = WebDriverWait(driver, 5).until(
+                element = WebDriverWait(driver, 2).until(
                     EC.presence_of_element_located((By.XPATH, f"//*[contains(text(), '{text}')]"))
                 )
                 found_text = text
                 print(f"QR code page detected: Found text '{text}'")
+                
+                # Take screenshot
+                screenshot_dir = "screenshots"
+                os.makedirs(screenshot_dir, exist_ok=True)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                screenshot_path = os.path.join(screenshot_dir, f"qr_code_{timestamp}.png")
+                driver.save_screenshot(screenshot_path)
+                print(f"Screenshot saved to {screenshot_path}")
+                
                 send_alert(
                     subject="WhatsApp Web QR Code Detected",
-                    message=f"Scan the QR code within next {timeout} seconds",
-                    recipient=os.getenv("ALERT_RECIPIENT")
+                    message=f"Scan the QR code ASAP",
+                    recipient=os.getenv("ALERT_RECIPIENT"),
+                    attachment_path=screenshot_path
                 )
                 break
             except:

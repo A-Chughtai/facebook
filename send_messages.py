@@ -3,12 +3,13 @@ import os
 from datetime import datetime, timedelta
 import re
 import time
+import random
 from typing import List, Dict, Optional
 from langchain_groq import ChatGroq
 from langchain.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
 import importlib.util
-from excel_handler import ExcelHandler
+from sheets_handler import SheetsHandler
 from followup_handler import FollowupHandler
 import whatsapp
 from message import setup_driver, send_messenger_message as send_messenger_message_driver
@@ -136,11 +137,11 @@ def send_messenger_message(user_id: str, message: str) -> bool:
 
 def process_unanswered_posts():
     # Initialize handlers
-    excel_handler = ExcelHandler()
+    sheets_handler = SheetsHandler()
     followup_handler = FollowupHandler()
     
     # Get unanswered posts
-    unanswered_posts = excel_handler.get_unanswered_posts()
+    unanswered_posts = sheets_handler.get_unanswered_posts()
     print(f"Found {len(unanswered_posts)} unanswered posts")
     
     # Track users we've already messaged in this execution
@@ -181,8 +182,8 @@ def process_unanswered_posts():
                 if not formatted_phone.startswith('+'):
                     formatted_phone = '+' + formatted_phone
                 
-                # Update WhatsApp number in Excel
-                excel_handler.update_whatsapp_number(post_id, formatted_phone)
+                # Update WhatsApp number in Google Sheets
+                sheets_handler.update_whatsapp_number(post_id, formatted_phone)
                 
                 print(f"Attempting to send WhatsApp message to {formatted_phone}")
                 if send_whatsapp_message(formatted_phone, message):
@@ -205,8 +206,8 @@ def process_unanswered_posts():
             
             # Process the result
             if message_sent and platform_used:
-                # Mark as sent in Excel
-                excel_handler.mark_message_sent(post_id)
+                # Mark as sent in Google Sheets
+                sheets_handler.mark_message_sent(post_id)
                 print(f"Successfully processed post {post_id} via {platform_used}")
                 
                 # Save message history

@@ -15,9 +15,20 @@ pydantic==2.6.3
 pandas==2.2.1
 openpyxl==3.1.2
 requests==2.31.0
+argparse==1.4.0
+pathlib==1.0.1
 
 # UI
 streamlit==1.45.1
 
 # Data Processing
 numpy==1.26.4
+
+# Google Sheets
+google-auth==2.27.0
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+gspread==5.12.4
+
+# Email
+secure-smtplib==0.1.1

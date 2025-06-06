@@ -106,7 +106,7 @@ def send_messenger_message(driver, user_id: str, message: str):
         url = driver.current_url
         print(url)
         # Check for auth platform redirect
-        if not re.match(r'^https?://(?:www\.)?facebook\.com/?$', url):
+        if not re.match(r'^https?://(?:www\.)?facebook\.com/(?:\?sk=welcome)?/?$', url):
             send_alert(
                 subject="Messenger Auth required",
                 message=f"Please authenticate the Messenger Platform ASAP. The program has paused. Press ENTER on console after auth",

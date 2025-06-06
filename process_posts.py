@@ -12,7 +12,7 @@ from langchain.schema.runnable import RunnablePassthrough
 import os
 import sys
 from dotenv import load_dotenv
-from excel_handler import ExcelHandler
+from sheets_handler import SheetsHandler
 
 # Set console encoding to UTF-8 for Windows
 if sys.platform == 'win32':
@@ -117,9 +117,9 @@ def format_phone_number(phone: str) -> str:
         return '+' + re.sub(r'\s+', '', phone[1:])
     return '+' + re.sub(r'\s+', '', phone)
 
-def get_processed_posts(excel_handler):
+def get_processed_posts(sheets_handler):
     """Get all post IDs that have been processed"""
-    posts = excel_handler.get_all_posts()
+    posts = sheets_handler.get_all_posts()
     return {post['post_id'] for post in posts}
 
 def process_posts(reprocess_all: bool = False):
@@ -131,8 +131,8 @@ def process_posts(reprocess_all: bool = False):
     # Initialize LangChain
     classification_chain, phone_chain = setup_langchain()
     
-    # Initialize Excel handler
-    excel_handler = ExcelHandler()
+    # Initialize Google Sheets handler
+    sheets_handler = SheetsHandler()
     
     # Load Facebook data
     print("Loading Facebook data...")
@@ -140,7 +140,7 @@ def process_posts(reprocess_all: bool = False):
         data = json.load(file)
     
     # Get already processed posts
-    processed_posts = get_processed_posts(excel_handler)
+    processed_posts = get_processed_posts(sheets_handler)
     print(f"Found {len(processed_posts)} already processed posts")
     
     # Filter out already processed posts
@@ -225,8 +225,8 @@ def process_posts(reprocess_all: bool = False):
             else:
                 print("No WhatsApp number found")
             
-            # Add post to Excel
-            success = excel_handler.add_post(
+            # Add post to Google Sheets
+            success = sheets_handler.add_post(
                 fb_id, 
                 username, 
                 post_id, 
@@ -250,7 +250,7 @@ def process_posts(reprocess_all: bool = False):
                 print(f"Estimated time remaining: {(avg_time * (total_posts - processed_count))/60:.1f} minutes")
                 print("-" * 50)
             else:
-                print("Failed to store post in Excel")
+                print("Failed to store post in Google Sheets")
             
             # Add a small delay between posts
             time.sleep(1)
