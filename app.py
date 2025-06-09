@@ -11,7 +11,6 @@ from followup_handler import FollowupHandler
 from run_data_collection import run_data_collection
 from send_messages import process_unanswered_posts
 from process_posts import process_posts
-import subprocess
 
 def setup_logging():
     if not os.path.exists("logs"):
@@ -95,55 +94,10 @@ def run_process_posts():
         logging.error(f"Error during post processing: {str(e)}")
         return False
 
-def run_setup():
-    """Run the setup.py script"""
-    logging.info("Starting setup process...")
-    try:
-        excel_files = ["db/social_media.xlsx", "db/followups.xlsx"]
-        files_exist = all(os.path.exists(file) for file in excel_files)
-        
-        if files_exist:
-            logging.info("Excel files already exist. Skipping setup.")
-            return True
-        
-        my_env = os.environ.copy()
-        my_env["PYTHONIOENCODING"] = "utf-8"
-        
-        result = subprocess.run(
-            [sys.executable, "setup.py"],
-            capture_output=True,
-            text=True,
-            encoding='utf-8',
-            env=my_env,
-            check=True
-        )
-        
-        if result.stdout:
-            logging.info(f"Setup output:\n{result.stdout}")
-        
-        logging.info("Setup completed successfully!")
-        return True
-    except subprocess.CalledProcessError as e:
-        error_msg = "Error running setup:"
-        if e.stdout:
-            error_msg += f"\nOutput: {e.stdout}"
-        if e.stderr:
-            error_msg += f"\nError: {e.stderr}"
-        logging.error(error_msg)
-        return False
-    except Exception as e:
-        logging.error(f"Error during setup: {str(e)}")
-        return False
-
 def main():
     # Set up logging
     setup_logging()
     logging.info("Starting continuous automation process...")
-    
-    # Run setup once at the beginning
-    if not run_setup():
-        logging.error("Initial setup failed. Exiting...")
-        return
     
     iteration = 1
     while True:
