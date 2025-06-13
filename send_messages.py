@@ -12,7 +12,7 @@ import importlib.util
 from sheets_handler import SheetsHandler
 from followup_handler import FollowupHandler
 import whatsapp
-from message import setup_driver, send_messenger_message as send_messenger_message_driver
+from message import send_messenger_message as send_messenger_message_playwright
 
 # Load environment variables
 load_dotenv()
@@ -124,16 +124,11 @@ def send_whatsapp_message(phone_number: str, message: str) -> bool:
             return False
 
 def send_messenger_message(user_id: str, message: str) -> bool:
-    driver = None
     try:
-        driver = setup_driver()
-        return send_messenger_message_driver(driver, user_id, message)
+        return send_messenger_message_playwright(user_id, message)
     except Exception as e:
         print(f"Error sending Messenger message: {str(e)}")
         return False
-    finally:
-        if driver:
-            driver.quit()
 
 def process_unanswered_posts():
     # Initialize handlers
