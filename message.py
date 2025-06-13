@@ -50,9 +50,12 @@ def type_like_human(page, selector, text):
 
 def send_messenger_message(user_id: str, message: str):
     with sync_playwright() as p:
+        # Check if running on Railway (environment variable)
+        is_railway = os.getenv('RAILWAY_ENVIRONMENT') is not None
+        
         # Launch browser with stealth mode
         browser = p.chromium.launch(
-            headless=False,
+            headless=is_railway,  # Use headless mode on Railway
             args=['--start-maximized']
         )
         

@@ -78,9 +78,12 @@ def setup_browser() -> Tuple[Browser, BrowserContext]:
         # Check if we have a saved session
         session_info = load_session_info()
         
+        # Check if running on Railway (environment variable)
+        is_railway = os.getenv('RAILWAY_ENVIRONMENT') is not None
+        
         browser = _playwright.chromium.launch_persistent_context(
             user_data_dir=os.path.abspath("browser_data"),
-            headless=False,
+            headless=is_railway,  # Use headless mode on Railway
             args=[
                 '--start-maximized',
                 '--disable-blink-features=AutomationControlled',
