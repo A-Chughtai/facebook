@@ -12,7 +12,6 @@ import importlib.util
 from sheets_handler import SheetsHandler
 from followup_handler import FollowupHandler
 import whatsapp
-from message import send_messenger_message as send_messenger_message_playwright
 
 # Load environment variables
 load_dotenv()
@@ -120,15 +119,8 @@ def send_whatsapp_message(phone_number: str, message: str) -> bool:
             return whatsapp.send_message(phone_number, message)
         except Exception as e:
             print(f"Error using whatsapp.py: {str(e)}")
-            print("Falling back to message.py...")
             return False
-
-def send_messenger_message(user_id: str, message: str) -> bool:
-    try:
-        return send_messenger_message_playwright(user_id, message)
-    except Exception as e:
-        print(f"Error sending Messenger message: {str(e)}")
-        return False
+    return False
 
 def process_unanswered_posts():
     # Initialize handlers
@@ -187,17 +179,9 @@ def process_unanswered_posts():
                     platform_used = "whatsapp"
                     print("WhatsApp message sent successfully")
                 else:
-                    print("WhatsApp message failed, will try Messenger")
-            
-            # Try Messenger if WhatsApp failed or no phone number available
-            if not message_sent:
-                print(f"Trying Messenger for user {username}")
-                if send_messenger_message(user_id, message):
-                    message_sent = True
-                    platform_used = "messenger"
-                    print("Messenger message sent successfully")
-                else:
-                    print("Messenger message failed")
+                    print("WhatsApp message failed")
+            else:
+                print("No phone number found in post text, skipping message")
             
             # Process the result
             if message_sent and platform_used:
@@ -227,7 +211,7 @@ def process_unanswered_posts():
                 # Add to messaged users
                 messaged_users.add(user_id)
             else:
-                print(f"Failed to send message for post {post_id} (both platforms failed)")
+                print(f"Failed to send message for post {post_id} (no phone number available or WhatsApp failed)")
             
         except Exception as e:
             print(f"Error processing post {post_id}: {str(e)}")

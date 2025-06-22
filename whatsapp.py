@@ -148,12 +148,12 @@ def wait_for_qr_scan(page: Page, timeout: int = 400) -> bool:
     Returns:
         bool: True if QR code was scanned successfully, False if timeout occurred
     """
-    time.sleep(7)
+    time.sleep(10)
     try:
         # First check if already logged in
         try:
             # Use a more reliable text-based selector that doesn't depend on class names
-            page.wait_for_selector('//*[text()="Chats" or text()="Loading your chats" or text()="End-to-end encrypted"]', timeout=3000)
+            page.wait_for_selector('//*[text()="Chats" or text()="Loading your chats" or text()="End-to-end encrypted" or @title="New chat" or @data-icon="new-chat-outline" or @data-icon="new-chat-online"]', timeout=3000)
             print("Already logged in")
             # Save session info since we're already logged in
             save_session_info()
@@ -267,6 +267,8 @@ def send_message(phone_number: str, message: str) -> bool:
         # Wait for QR code to be scanned
         if not wait_for_qr_scan(page):
             print("Failed to scan QR code within timeout period")
+            time.sleep(5)
+            cleanup()
             return False
             
         # Now go to the specific chat
@@ -289,19 +291,16 @@ def send_message(phone_number: str, message: str) -> bool:
         print("Message sent successfully!")
         time.sleep(2)
         
-        # Close the current page but keep the browser
-        if page:
-            page.close()
-        
+        # Wait 5 seconds before closing the browser
+        time.sleep(5)
+        cleanup()
         return True
 
     except Exception as e:
         print(f"Error sending WhatsApp message: {str(e)}")
-        if page:
-            try:
-                page.close()
-            except:
-                pass
+        # Wait 5 seconds before closing the browser on failure
+        time.sleep(5)
+        cleanup()
         return False
 
 def cleanup() -> None:
@@ -341,4 +340,4 @@ if __name__ == "__main__":
     try:
         send_message(args.phone, args.message)
     finally:
-        cleanup()
+        pass  # cleanup is now handled inside send_message

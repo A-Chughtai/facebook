@@ -11,6 +11,8 @@ from followup_handler import FollowupHandler
 from run_data_collection import run_data_collection
 from send_messages import process_unanswered_posts
 from process_posts import process_posts
+from whatsapp_routine import run_whatsapp_routine
+import pytz
 
 def setup_logging():
     if not os.path.exists("logs"):
@@ -94,25 +96,52 @@ def run_process_posts():
         logging.error(f"Error during post processing: {str(e)}")
         return False
 
+def get_dubai_time():
+    """Get the current time in Dubai timezone (UTC+4)"""
+    dubai_tz = pytz.timezone('Asia/Dubai')
+    return datetime.now(dubai_tz)
+
 def main():
     # Set up logging
     setup_logging()
     logging.info("Starting continuous automation process...")
     
     iteration = 1
+    # Track last run date for Followups and WhatsApp Routine
+    last_run = {
+        "Followups": None,
+        "WhatsApp Routine": None
+    }
+    
     while True:
         logging.info(f"\n{'='*50}")
         logging.info(f"Starting iteration {iteration}")
         logging.info(f"{'='*50}\n")
         
+        # Get current Dubai time
+        dubai_now = get_dubai_time()
+        dubai_hour = dubai_now.hour
+        dubai_minute = dubai_now.minute
+        today_str = dubai_now.strftime('%Y-%m-%d')
+
         # Run all processes in sequence
         processes = [
             ("Data Collection", run_data_collection_process),
             ("Process Posts", run_process_posts),
             ("Automation", run_automation),
-            ("Followups", run_followups)
         ]
-        
+
+        # Add Followups and WhatsApp Routine only if in time window and not run today
+        if 9 <= dubai_hour < 12 or (dubai_hour == 11 and dubai_minute <= 55):
+            # Followups
+            if last_run["Followups"] != today_str:
+                processes.append(("Followups", run_followups))
+                last_run["Followups"] = today_str
+            # WhatsApp Routine
+            if last_run["WhatsApp Routine"] != today_str:
+                processes.append(("WhatsApp Routine", run_whatsapp_routine))
+                last_run["WhatsApp Routine"] = today_str
+
         for process_name, process_func in processes:
             logging.info(f"\nStarting {process_name}...")
             success = process_func()

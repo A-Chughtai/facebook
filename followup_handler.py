@@ -193,10 +193,9 @@ class FollowupHandler:
                         print(f"Attempting to send WhatsApp message to {formatted_phone}")
                         message_sent = self.send_whatsapp_message(formatted_phone, message)
                     
-                    # If WhatsApp fails or no phone number, try Messenger
-                    if not message_sent:
-                        print(f"WhatsApp message failed or no phone number, trying Messenger for user {username}")
-                        message_sent = self.send_messenger_message(user_id, message)
+                    # If no phone number available, skip this follow-up
+                    if not phone_number:
+                        print(f"No phone number available for user {username}, skipping follow-up")
                     
                     # Update follow-up status based on message success
                     if message_sent:
@@ -230,17 +229,4 @@ class FollowupHandler:
             return send_whatsapp(phone_number, message)
         except Exception as e:
             print(f"Error sending WhatsApp message: {str(e)}")
-            return False
-    
-    def send_messenger_message(self, user_id: str, message: str) -> bool:
-        """Send Messenger message using message.py"""
-        try:
-            from message import setup_driver, send_messenger_message
-            driver = setup_driver()
-            try:
-                return send_messenger_message(driver, user_id, message)
-            finally:
-                driver.quit()
-        except Exception as e:
-            print(f"Error sending Messenger message: {str(e)}")
             return False 
