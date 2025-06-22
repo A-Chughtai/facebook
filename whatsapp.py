@@ -221,14 +221,14 @@ def wait_for_qr_scan(page: Page, timeout: int = 400) -> bool:
                 print("Waiting for page to load completely...")
                 time.sleep(20)  # Increased wait time
                 try:
-                    # Verify Chats text is present
-                    page.wait_for_selector('//*[text()="Chats"]', timeout=60000)
-                    print("Chats text detected - QR code scanned successfully!")
+                    # Verify Chats text or aria-label is present
+                    page.wait_for_selector('//*[text()="Chats" or @aria-label="WhatsApp"]', timeout=60000)
+                    print("Chats text or WhatsApp aria-label detected - QR code scanned successfully!")
                     # Save session info after successful QR scan
                     save_session_info()
                     return True
                 except:
-                    print("Chats text not found after QR code text disappeared")
+                    print("Chats text or WhatsApp aria-label not found after QR code text disappeared")
                     return False
         
         print("Timeout waiting for QR code to be scanned")
@@ -260,6 +260,10 @@ def send_message(phone_number: str, message: str) -> bool:
         
         browser, page = get_browser()
         
+        # Wait 5 seconds and press ESC to bypass any UI compoments
+        time.sleep(5)
+        page.keyboard.press('Escape')
+
         # First, go to the main WhatsApp Web page
         page.goto("https://web.whatsapp.com", wait_until="networkidle")
         page.wait_for_load_state('networkidle')
@@ -270,11 +274,19 @@ def send_message(phone_number: str, message: str) -> bool:
             time.sleep(5)
             cleanup()
             return False
+        
+        # Wait 5 seconds and press ESC to bypass any UI compoments
+        time.sleep(7)
+        page.keyboard.press('Escape')
             
         # Now go to the specific chat
         url = f"https://web.whatsapp.com/send?phone={phone_number}"
         page.goto(url, wait_until="networkidle")
         page.wait_for_load_state('networkidle')
+
+        # Wait 5 seconds and press ESC to bypass any UI compoments
+        time.sleep(5)
+        page.keyboard.press('Escape')
 
         print("Waiting for WhatsApp chat to load...")
         page.wait_for_selector('div[data-tab="10"][contenteditable="true"]', timeout=90000)
