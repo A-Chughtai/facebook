@@ -153,8 +153,8 @@ def main():
         logging.info("Waiting 30 minutes before next iteration...")
         logging.info(f"{'='*50}\n")
         
-        # Wait for 30 minutes
-        time.sleep(30 * 60)  # 30 minutes in seconds
+        # Wait for 15 minutes
+        time.sleep(15 * 60)  # 15 minutes in seconds
         iteration += 1
 
 if __name__ == "__main__":
