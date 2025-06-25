@@ -294,8 +294,16 @@ def send_message(phone_number: str, message: str) -> bool:
         page.goto(url, wait_until="networkidle")
         page.wait_for_load_state('networkidle')
 
-        print("Waiting for WhatsApp chat to load...")
-        page.wait_for_selector('div[data-tab="10"][contenteditable="true"]', timeout=90000)
+        max_attempts = 2  # Try twice: first normally, then after pressing ESCAPE
+        for attempt in range(max_attempts):
+            try:
+                page.wait_for_selector('div[data-tab="10"][contenteditable="true"]', timeout=150000)
+                break  # Found the selector, exit the loop
+            except PlaywrightTimeoutError:
+                if attempt == max_attempts - 1:
+                    raise  # If this was the last attempt, re-raise the error
+                # Press ESCAPE and try again
+                page.keyboard.press("Escape")
         
         # Get the message input box and type message
         message_box = page.locator('div[data-tab="10"][contenteditable="true"]')
