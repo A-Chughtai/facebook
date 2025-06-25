@@ -292,17 +292,12 @@ def send_message(phone_number: str, message: str) -> bool:
         except Exception as e:
             print("Could not find or click the Continue button:", e)
 
-        max_attempts = 2  # Try twice: first normally, then after pressing ESCAPE
-        for attempt in range(max_attempts):
-            try:
-                page.wait_for_selector('div[data-tab="10"][contenteditable="true"]', timeout=150000)
-                break  # Found the selector, exit the loop
-            except PlaywrightTimeoutError:
-                if attempt == max_attempts - 1:
-                    raise  # If this was the last attempt, re-raise the error
-                url = f"https://web.whatsapp.com/send?phone={phone_number}"
-                page.goto(url, wait_until="networkidle")
-                page.wait_for_load_state('networkidle')
+        page.wait_for_selector('div[data-tab="10"][contenteditable="true"]', timeout=150000)
+        
+        
+        url = f"https://web.whatsapp.com/send?phone={phone_number}"
+        page.goto(url, wait_until="networkidle")
+        page.wait_for_load_state('networkidle')
 
         # Get the message input box and type message
         message_box = page.locator('div[data-tab="10"][contenteditable="true"]')
