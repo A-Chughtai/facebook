@@ -262,9 +262,11 @@ def send_message(phone_number: str, message: str) -> bool:
         
         # Wait 5 seconds and press ESC to bypass any UI compoments
         time.sleep(5)
-        page.evaluate("""
-            document.dispatchEvent(new KeyboardEvent('keydown', {'key': 'Escape'}));
-        """)
+        try:
+            page.locator('button:has-text("Continue")').click()
+            print("Clicked the Continue button.")
+        except Exception as e:
+            print("Could not find or click the Continue button:", e)
 
         # First, go to the main WhatsApp Web page
         page.goto("https://web.whatsapp.com", wait_until="networkidle")
@@ -279,14 +281,24 @@ def send_message(phone_number: str, message: str) -> bool:
         
         # Wait 5 seconds and press ESC to bypass any UI compoments
         time.sleep(5)
-        page.evaluate("""
-            document.dispatchEvent(new KeyboardEvent('keydown', {'key': 'Escape'}));
-        """)
+        try:
+            page.locator('button:has-text("Continue")').click()
+            print("Clicked the Continue button.")
+        except Exception as e:
+            print("Could not find or click the Continue button:", e)
             
         # Now go to the specific chat
         url = f"https://web.whatsapp.com/send?phone={phone_number}"
         page.goto(url, wait_until="networkidle")
         page.wait_for_load_state('networkidle')
+
+        # Wait 5 seconds and press ESC to bypass any UI compoments
+        time.sleep(5)
+        try:
+            page.locator('button:has-text("Continue")').click()
+            print("Clicked the Continue button.")
+        except Exception as e:
+            print("Could not find or click the Continue button:", e)
 
         max_attempts = 2  # Try twice: first normally, then after pressing ESCAPE
         for attempt in range(max_attempts):
