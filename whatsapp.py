@@ -260,14 +260,6 @@ def send_message(phone_number: str, message: str) -> bool:
         
         browser, page = get_browser()
         
-        # Wait 5 seconds and press ESC to bypass any UI compoments
-        time.sleep(5)
-        try:
-            page.locator('button:has-text("Continue")').click()
-            print("Clicked the Continue button.")
-        except Exception as e:
-            print("Could not find or click the Continue button:", e)
-
         # First, go to the main WhatsApp Web page
         page.goto("https://web.whatsapp.com", wait_until="networkidle")
         page.wait_for_load_state('networkidle')
