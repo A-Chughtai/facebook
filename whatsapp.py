@@ -262,9 +262,7 @@ def send_message(phone_number: str, message: str) -> bool:
         
         # Wait 5 seconds and press ESC to bypass any UI compoments
         time.sleep(5)
-        element = page.locator('body')
-        element.focus()
-        element.press('Escape')
+        page.keyboard.press('Escape')
 
         # First, go to the main WhatsApp Web page
         page.goto("https://web.whatsapp.com", wait_until="networkidle")
@@ -297,11 +295,10 @@ def send_message(phone_number: str, message: str) -> bool:
             except PlaywrightTimeoutError:
                 if attempt == max_attempts - 1:
                     raise  # If this was the last attempt, re-raise the error
-                # Press ESCAPE and try again
-                element = page.locator('body')
-                element.focus()
-                element.press('Escape')
-        
+                url = f"https://web.whatsapp.com/send?phone={phone_number}"
+                page.goto(url, wait_until="networkidle")
+                page.wait_for_load_state('networkidle')
+
         # Get the message input box and type message
         message_box = page.locator('div[data-tab="10"][contenteditable="true"]')
         message_box.click()
