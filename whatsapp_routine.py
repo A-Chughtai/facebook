@@ -45,3 +45,9 @@ def run_whatsapp_routine():
     except Exception as e:
         print(f"Error running WhatsApp routine: {str(e)}")
         return False 
+
+def main():
+    run_whatsapp_routine()
+
+if __name__ == "__main__":
+    main()

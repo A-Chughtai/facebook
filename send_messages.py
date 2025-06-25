@@ -169,11 +169,10 @@ def process_unanswered_posts():
                 if not formatted_phone.startswith('+'):
                     formatted_phone = '+' + formatted_phone
                 
-                # Update WhatsApp number in Google Sheets
-                sheets_handler.update_whatsapp_number(post_id, formatted_phone)
-                
                 print(f"Attempting to send WhatsApp message to {formatted_phone}")
                 if send_whatsapp_message(formatted_phone, message):
+                    # Update WhatsApp number in Google Sheets only if message sent
+                    sheets_handler.update_whatsapp_number(post_id, formatted_phone)
                     print(f"WhatsApp message sent successfully to {formatted_phone}")
                     message_sent = True
                     platform_used = "whatsapp"
@@ -185,7 +184,7 @@ def process_unanswered_posts():
             
             # Process the result
             if message_sent and platform_used:
-                # Mark as sent in Google Sheets
+                # Mark as sent in Google Sheets only if WhatsApp message sent
                 sheets_handler.mark_message_sent(post_id)
                 print(f"Successfully processed post {post_id} via {platform_used}")
                 
