@@ -276,12 +276,17 @@ def send_message(phone_number: str, message: str) -> bool:
             return False
         
         # Wait 5 seconds and press ESC to bypass any UI compoments
-        time.sleep(7)
+        time.sleep(5)
         page.keyboard.press('Escape')
+        time.sleep(1)
         page.keyboard.press('Escape')
+        time.sleep(1)
         page.keyboard.press('Escape')
+        time.sleep(1)
         page.keyboard.press('Escape')
+        time.sleep(1)
         page.keyboard.press('Escape')
+        time.sleep(1)
         page.keyboard.press('Escape')
             
         # Now go to the specific chat
@@ -289,24 +294,9 @@ def send_message(phone_number: str, message: str) -> bool:
         page.goto(url, wait_until="networkidle")
         page.wait_for_load_state('networkidle')
 
-        # Wait 5 seconds and press ESC to bypass any UI compoments
-        time.sleep(5)
-        page.keyboard.press('Escape')
-        page.keyboard.press('Escape')
-        page.keyboard.press('Escape')
-        page.keyboard.press('Escape')
-        page.keyboard.press('Escape')
-        page.keyboard.press('Escape')
-
         print("Waiting for WhatsApp chat to load...")
-        page.keyboard.press('Escape')
-        page.keyboard.press('Escape')
-        page.keyboard.press('Escape')
         page.wait_for_selector('div[data-tab="10"][contenteditable="true"]', timeout=90000)
-        page.keyboard.press('Escape')
-        page.keyboard.press('Escape')
-        page.keyboard.press('Escape')
-
+        
         # Get the message input box and type message
         message_box = page.locator('div[data-tab="10"][contenteditable="true"]')
         message_box.click()
