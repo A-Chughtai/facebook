@@ -262,7 +262,9 @@ def send_message(phone_number: str, message: str) -> bool:
         
         # Wait 5 seconds and press ESC to bypass any UI compoments
         time.sleep(5)
-        page.keyboard.press('Escape')
+        page.evaluate("""
+            document.dispatchEvent(new KeyboardEvent('keydown', {'key': 'Escape'}));
+        """)
 
         # First, go to the main WhatsApp Web page
         page.goto("https://web.whatsapp.com", wait_until="networkidle")
@@ -277,10 +279,9 @@ def send_message(phone_number: str, message: str) -> bool:
         
         # Wait 5 seconds and press ESC to bypass any UI compoments
         time.sleep(5)
-        element = page.locator('body')
-        element.focus()
-        element.press('Escape')
-        time.sleep(1)
+        page.evaluate("""
+            document.dispatchEvent(new KeyboardEvent('keydown', {'key': 'Escape'}));
+        """)
             
         # Now go to the specific chat
         url = f"https://web.whatsapp.com/send?phone={phone_number}"
