@@ -262,7 +262,9 @@ def send_message(phone_number: str, message: str) -> bool:
         
         # Wait 5 seconds and press ESC to bypass any UI compoments
         time.sleep(5)
-        page.keyboard.press('Escape')
+        element = page.locator('body')
+        element.focus()
+        element.press('Escape')
 
         # First, go to the main WhatsApp Web page
         page.goto("https://web.whatsapp.com", wait_until="networkidle")
@@ -277,17 +279,10 @@ def send_message(phone_number: str, message: str) -> bool:
         
         # Wait 5 seconds and press ESC to bypass any UI compoments
         time.sleep(5)
-        page.keyboard.press('Escape')
+        element = page.locator('body')
+        element.focus()
+        element.press('Escape')
         time.sleep(1)
-        page.keyboard.press('Escape')
-        time.sleep(1)
-        page.keyboard.press('Escape')
-        time.sleep(1)
-        page.keyboard.press('Escape')
-        time.sleep(1)
-        page.keyboard.press('Escape')
-        time.sleep(1)
-        page.keyboard.press('Escape')
             
         # Now go to the specific chat
         url = f"https://web.whatsapp.com/send?phone={phone_number}"
@@ -303,7 +298,9 @@ def send_message(phone_number: str, message: str) -> bool:
                 if attempt == max_attempts - 1:
                     raise  # If this was the last attempt, re-raise the error
                 # Press ESCAPE and try again
-                page.keyboard.press("Escape")
+                element = page.locator('body')
+                element.focus()
+                element.press('Escape')
         
         # Get the message input box and type message
         message_box = page.locator('div[data-tab="10"][contenteditable="true"]')
