@@ -37,10 +37,15 @@ def type_like_human(page: Page, text: str) -> None:
     page.keyboard.press("Backspace")
     human_delay()
     
-    text = text.replace('\n', ' ')
     for char in text:
-        page.keyboard.type(char)
-        time.sleep(random.uniform(0.01, 0.05))
+        if char == '\n':
+            for _ in range(2):
+                page.keyboard.down('Shift')
+                page.keyboard.press('Enter')
+                page.keyboard.up('Shift')
+        else:
+            page.keyboard.type(char)
+            time.sleep(random.uniform(0.01, 0.05))
     human_delay()
 
 def save_session_info():
@@ -238,6 +243,10 @@ def wait_for_qr_scan(page: Page, timeout: int = 400) -> bool:
         print("Error during QR code scanning:", str(e))
         return False
 
+def clean_message(text: str) -> str:
+    """Remove spaces that appear immediately after a newline character."""
+    return re.sub(r'\n +', '\n', text)
+
 def send_message(phone_number: str, message: str) -> bool:
     """
     Send a WhatsApp message using Playwright.
@@ -257,6 +266,9 @@ def send_message(phone_number: str, message: str) -> bool:
         phone_number = str(phone_number)
         # Remove all non-digit characters
         phone_number = re.sub(r'\D', '', phone_number)
+        
+        # Clean up message to remove spaces after newlines
+        message = clean_message(message)
         
         browser, page = get_browser()
         
