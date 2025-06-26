@@ -65,24 +65,25 @@ class FollowupHandler:
             
             # Create prompt template
             prompt = ChatPromptTemplate.from_messages([
-                ("system", """You are a professional job seeker following up with recruiters. Your task is to compose an engaging follow-up message that maintains the conversation and shows continued interest.
+                ("system", """Your task is to compose an engaging follow-up message that maintains the conversation and shows continued interest.
+
+                History text:
+                {message_history}
 
                 Guidelines:
-                - Write a complete, ready-to-send message without any placeholders
-                - Be professional but warm and engaging
-                - Acknowledge previous interaction
-                - Show continued interest in the opportunity
-                - Ask a specific question or provide new information
+                - Write a complete, ready-to-send message without any placeholders or [brackets]
+                - Be professional but friendly
                 - Keep the message concise and clear
-                - Don't use emojis or informal language
-                - Don't use templates or placeholders
-                - Don't include [Your Name] or [Recruiter's Name]
-                - Focus on maintaining the relationship and moving the conversation forward
+                - Don't use placeholders - write the complete message as if you're sending it right now
+                - Don't include [Your Name] or [Recruiter's Name] - just write the message as is
+                - Be direct and write a really short message please
+                - Personalize accordin to message history
+                - Strictly follow the structure, tone, and content of the example template below. The message must closely resemble the template, only changing details to personalize for the user, company, and post.
+
+                Example Template:
+                Hi hope you having a good morning , do you have any staff or any type of event requirements which Ta'al can 100% take care of ,completely on your budget? Please let me know. Thanks                
                 
-                Previous message history:
-                {message_history}
-                
-                Compose a professional follow-up message that keeps the conversation going."""),
+                """),
             ])
             
             # Format message history for the prompt

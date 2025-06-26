@@ -150,7 +150,7 @@ def main():
         
         logging.info(f"\n{'='*50}")
         logging.info(f"Iteration {iteration} completed")
-        logging.info("Waiting 30 minutes before next iteration...")
+        logging.info("Waiting 15 minutes before next iteration...")
         logging.info(f"{'='*50}\n")
         
         # Wait for 15 minutes

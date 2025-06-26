@@ -74,27 +74,32 @@ def generate_message(post_text: str, message_history: List[Dict]) -> str:
     
     # Create prompt template
     prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are a professional job seeker reaching out to recruiters. Your task is to compose a personalized message based on the job post and previous message history.
-        
-        Guidelines:
-        - Write a complete, ready-to-send message without any placeholders or [brackets]
-        - Be professional but friendly
-        - Reference specific details from their post
-        - If there's message history, acknowledge previous interactions
-        - Keep the message concise and clear
-        - Include a call to action
-        - Don't use emojis or informal language
-        - Don't use templates or placeholders - write the complete message as if you're sending it right now
-        - Don't include [Your Name] or [Recruiter's Name] - just write the message as is
-        - Be direct and write a really short message please
-        
-        Previous message history:
-        {message_history}
+        ("system", """Your task is to compose a personalized message based on the template for out reach for a company Ta'al!. Your name is Subash
         
         Job post text:
         {post_text}
+
+        Guidelines:
         
-        Compose a professional message to send to the recruiter."""),
+        - Write a complete, ready-to-send message without any placeholders or [brackets]
+        - Be professional but friendly
+        - Keep the message concise and clear
+        - Don't use placeholders - write the complete message as if you're sending it right now
+        - Don't include [Your Name] or [Recruiter's Name] - just write the message as is
+        - Be direct and write a really short message please
+        - Strictly follow the structure, tone, and content of the example template below. The message must closely resemble the template, only changing details to personalize for the user, company, and post.
+        - Personalize the message according to the user's name, company name, and the post text. Use any available information to make the message feel tailored to the recipient and their company.
+        - Don't add phone numbers and other contacts
+        - Use the following template for tone, structure, and content. Adapt it to the context of each post and user:
+        
+        Template:
+        Hi, this is Subash from Ta'al!
+        We're all about making life easier for businesses by connecting them with reliable part-time workers. Every person we recommend is fully verified and screened, so you don't have to worry about quality or trust.
+        The best part? We don't charge any commissions or add hidden fees—it's all based on your budget.        
+        If you've got an event coming up and need dependable staff, just let me know. We'd love to help you out!
+        Looking forward to hearing from you.        
+        
+        """),
     ])
     
     # Format message history for the prompt
